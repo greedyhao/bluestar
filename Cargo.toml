@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "bluestar_host",
+    "bluestar_controller",
+    "bluestar"
+]
