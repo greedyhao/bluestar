@@ -108,7 +108,7 @@ impl Channel {
             local_mtu: 0,
             remote_mtu: L2CAP_DEFAULT_MTU,
 
-            sig_seq_num: 1,
+            sig_seq_num: 0,
 
             psm,
         }
@@ -144,7 +144,11 @@ impl Channel {
     fn send_classic_signaling_packet(&mut self, cmd: SignalingCommand, data: &[u8]) {
         // create signaling packet
         let mut acl_buffer = [0 as u8; 200];
+        self.create_classic_signaling_packet(&mut acl_buffer, cmd, data);
+        self.request(&acl_buffer);
+    }
 
+    fn create_classic_signaling_packet(&mut self, acl_buffer: &mut [u8], cmd: SignalingCommand, option: &[u8]) {
         // octet 0: code
         acl_buffer[0] = cmd as u8;
 
@@ -152,10 +156,7 @@ impl Channel {
         self.next_sig_id();
         acl_buffer[1] = self.sig_seq_num.clone();
 
-        // octet 2 and 3: data length
-        let len = (data.len() & 0xffff) as u16;
-        set_u16_le(&mut acl_buffer[2..4], len);
-
+        let mut len = 0;
         match cmd {
             // SignalingCommand::CommandRejectRsp => {}
             SignalingCommand::ConnectionReq => {
@@ -163,11 +164,17 @@ impl Channel {
 
                 self.next_loacl_cid();
                 set_u16_le(&mut acl_buffer[6..8], self.local_cid.clone());
+                len += 4;
             }
             _ => {}
         }
 
-        self.request(&acl_buffer);
+        // octet 2 and 3: data length
+        len += (option.len() & 0xffff) as u16;
+        set_u16_le(&mut acl_buffer[2..4], len);
+
+        // octet: option data
+        // TODO
     }
 
     fn next_sig_id(&mut self) {
@@ -197,4 +204,25 @@ struct Signal {
 fn set_u16_le(a: &mut [u8], v: u16) {
     a[0] = v as u8;
     a[1] = (v >> 8) as u8;
+}
+
+fn get_u16_le(a: &[u8]) -> u16 {
+    a[0] as u16 + ((a[1] as u16) << (8 as u8)) as u16
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_create_signal_packet() {
+        let mut channel = Channel::new(0);
+        
+        let mut acl_buffer = [0 as u8; 200];
+        channel.create_classic_signaling_packet(&mut acl_buffer, SignalingCommand::ConnectionReq, &[]);
+        let len = &acl_buffer[2..4];
+        let len = get_u16_le(len) as usize + 4;
+        assert_eq!(&acl_buffer[0..len], [2, 1, 4, 0, 0, 0, 1, 0]);
+    }
 }
