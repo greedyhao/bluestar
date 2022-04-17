@@ -178,7 +178,7 @@ impl Channel {
     }
 
     fn next_sig_id(&mut self) {
-        if self.sig_seq_num == 0xff as u8 {
+        if self.sig_seq_num == 0xff_u8 {
             self.sig_seq_num = 1;
         } else {
             self.sig_seq_num += 1;
@@ -186,7 +186,7 @@ impl Channel {
     }
 
     fn next_loacl_cid(&mut self) {
-        if self.local_cid == 0xffff as u16 {
+        if self.local_cid == 0 || self.local_cid == 0xffff_u16 {
             self.local_cid = 0x40;
         } else {
             self.local_cid += 1;
@@ -223,6 +223,7 @@ mod tests {
         channel.create_classic_signaling_packet(&mut acl_buffer, SignalingCommand::ConnectionReq, &[]);
         let len = &acl_buffer[2..4];
         let len = get_u16_le(len) as usize + 4;
-        assert_eq!(&acl_buffer[0..len], [2, 1, 4, 0, 0, 0, 1, 0]);
+        // dbg!(&acl_buffer[0..len]);
+        assert_eq!(&acl_buffer[0..len], [2, 1, 4, 0, 0, 0, 64, 0]);
     }
 }
