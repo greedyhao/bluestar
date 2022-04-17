@@ -74,6 +74,13 @@ enum SignalingCommand {
     CreditBasedReconnectionRsp,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum RejectReason {
+    CommandNotUnderstood = 0x0000,
+    SignalingMTUExceeded,
+    InvalidCIDInRequest,
+}
+
 type BtDevAddr = [u8; 6];
 
 #[derive(Debug, Clone)]
@@ -158,8 +165,11 @@ impl Channel {
 
         let mut len = 0;
         match cmd {
-            // SignalingCommand::CommandRejectRsp => {}
-            SignalingCommand::ConnectionReq => {
+            SignalingCommand::CommandRejectRsp => {
+                set_u16_le(&mut acl_buffer[4..6], RejectReason::CommandNotUnderstood as u16);
+                len += 2;
+                // TODO: Reason Data
+            }
                 set_u16_le(&mut acl_buffer[4..6], self.psm.clone());
 
                 self.next_loacl_cid();
