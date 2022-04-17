@@ -81,6 +81,25 @@ enum RejectReason {
     InvalidCIDInRequest,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum ConnectionResult {
+    Successful = 0x0000,
+    Pending,
+    RefusedPSMNotSupported,
+    RefusedSecurityBlock,
+    RefusedNoResourcesAvaliable,
+    RefusedInvalidSourceCID,
+    RefusedSourceCIDAlreadyAllocated,
+}
+
+/// Only defined for Result = Pending
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum ConnectionStatus {
+    NoFurtherInformationAvaliable,
+    AuthenticationPending,
+    Authorization_Pending,
+}
+
 type BtDevAddr = [u8; 6];
 
 #[derive(Debug, Clone)]
@@ -170,6 +189,7 @@ impl Channel {
                 len += 2;
                 // TODO: Reason Data
             }
+            SignalingCommand::ConnectionReq | SignalingCommand::ConnectionRsp => {
                 set_u16_le(&mut acl_buffer[4..6], self.psm.clone());
 
                 self.next_loacl_cid();
