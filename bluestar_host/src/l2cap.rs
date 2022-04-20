@@ -100,6 +100,15 @@ enum SignalConnectionStatus {
     Authorization_Pending,
 }
 
+enum SignalConfigurationResult {
+    Successful = 0x0000,
+    FailureUnacceptableParamters,
+    FailureRejectd,
+    FailureUnknownOptions,
+    Pending,
+    FailureFlowSpecRejected,
+}
+
 type BtDevAddr = [u8; 6];
 
 #[derive(Debug, Clone)]
@@ -208,6 +217,13 @@ impl Channel {
                 set_u16_le(&mut acl_buffer[6..8], flags);
 
                 // Configuration Options send in option argument
+            }
+            SignalingCommand::ConfigurationRsp => {
+                set_u16_le(&mut acl_buffer[4..6], self.local_cid.clone());
+                let flags = 0x0000_u16;
+                set_u16_le(&mut acl_buffer[6..8], flags);
+                // TODO: Other result
+                set_u16_le(&mut acl_buffer[8..10], SignalConfigurationResult::Successful as u16);
             }
             _ => {}
         }
