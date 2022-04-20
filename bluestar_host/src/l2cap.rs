@@ -184,14 +184,10 @@ impl Channel {
     }
 
     fn create_classic_signaling_packet(&mut self, acl_buffer: &mut [u8], cmd: SignalingCommand, option: &[u8]) {
-        // octet 0: code
-        acl_buffer[0] = cmd as u8;
-
-        // octet 1: identifier
-        self.next_sig_id();
-        acl_buffer[1] = self.sig_seq_num.clone();
-
         let mut len = 0;
+        // clear data length field
+        set_u16_le(&mut acl_buffer[2..4], len.clone());
+
         match cmd {
             SignalingCommand::CommandRejectRsp => {
                 set_u16_le(&mut acl_buffer[4..6], SignalRejectReason::CommandNotUnderstood as u16);
@@ -232,11 +228,18 @@ impl Channel {
             _ => {}
         }
 
+        // octet 0: code
+        acl_buffer[0] = cmd as u8;
+
+        // octet 1: identifier
+        self.next_sig_id();
+        acl_buffer[1] = self.sig_seq_num.clone();
+
         // octet 2 and 3: data length
         len += (option.len() & 0xffff) as u16;
         set_u16_le(&mut acl_buffer[2..4], len);
 
-        // octet: option data
+        // octet..: option data
         // TODO
     }
 
