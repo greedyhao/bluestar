@@ -202,6 +202,13 @@ impl Channel {
 
                 // Result and Status send in option argument
             }
+            SignalingCommand::ConfigurationReq => {
+                set_u16_le(&mut acl_buffer[4..6], self.remote_cid.clone());
+                let flags = 0x0000_u16;
+                set_u16_le(&mut acl_buffer[6..8], flags);
+
+                // Configuration Options send in option argument
+            }
             _ => {}
         }
 
