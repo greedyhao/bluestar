@@ -189,12 +189,18 @@ impl Channel {
                 len += 2;
                 // TODO: Reason Data
             }
-            SignalingCommand::ConnectionReq | SignalingCommand::ConnectionRsp => {
+            SignalingCommand::ConnectionReq => {
                 set_u16_le(&mut acl_buffer[4..6], self.psm.clone());
 
                 self.next_loacl_cid();
                 set_u16_le(&mut acl_buffer[6..8], self.local_cid.clone());
                 len += 4;
+            }
+            SignalingCommand::ConnectionRsp => {
+                set_u16_le(&mut acl_buffer[4..6], self.remote_cid.clone());
+                set_u16_le(&mut acl_buffer[6..8], self.local_cid.clone());
+
+                // Result and Status send in option argument
             }
             _ => {}
         }
