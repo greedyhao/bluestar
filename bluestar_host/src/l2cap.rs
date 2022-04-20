@@ -75,14 +75,14 @@ enum SignalingCommand {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum RejectReason {
+enum SignalRejectReason {
     CommandNotUnderstood = 0x0000,
     SignalingMTUExceeded,
     InvalidCIDInRequest,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum ConnectionResult {
+enum SignalConnectionResult {
     Successful = 0x0000,
     Pending,
     RefusedPSMNotSupported,
@@ -94,8 +94,8 @@ enum ConnectionResult {
 
 /// Only defined for Result = Pending
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum ConnectionStatus {
-    NoFurtherInformationAvaliable,
+enum SignalConnectionStatus {
+    NoFurtherInformationAvaliable = 0x0000,
     AuthenticationPending,
     Authorization_Pending,
 }
@@ -185,7 +185,7 @@ impl Channel {
         let mut len = 0;
         match cmd {
             SignalingCommand::CommandRejectRsp => {
-                set_u16_le(&mut acl_buffer[4..6], RejectReason::CommandNotUnderstood as u16);
+                set_u16_le(&mut acl_buffer[4..6], SignalRejectReason::CommandNotUnderstood as u16);
                 len += 2;
                 // TODO: Reason Data
             }
