@@ -225,7 +225,7 @@ impl Channel {
                 // TODO: Other result
                 set_u16_le(&mut acl_buffer[8..10], SignalConfigurationResult::Successful as u16);
             }
-            SignalingCommand::DisconnectionReq => {
+            SignalingCommand::DisconnectionReq | SignalingCommand::DisconnectionRsp => {
                 set_u16_le(&mut acl_buffer[4..6], self.remote_cid.clone());
                 set_u16_le(&mut acl_buffer[6..8], self.local_cid.clone());
             }
