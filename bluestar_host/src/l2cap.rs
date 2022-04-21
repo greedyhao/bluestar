@@ -109,6 +109,12 @@ enum SignalConfigurationResult {
     FailureFlowSpecRejected,
 }
 
+enum SignalInformationInfoType {
+    ConnectionlessMTU = 0x0001,
+    ExtendedFeaturesSupported,
+    FixedChannelsSupported,
+}
+
 type BtDevAddr = [u8; 6];
 
 #[derive(Debug, Clone)]
@@ -225,6 +231,19 @@ impl Channel {
                 set_u16_le(&mut acl_buffer[4..6], self.remote_cid.clone());
                 set_u16_le(&mut acl_buffer[6..8], self.local_cid.clone());
             }
+            SignalingCommand::InformationReq => {
+                // Core v5.3, vol 3, 4.10
+                // L2CAP_INFORMATION_REQ and L2CAP_INFORMATION_RSP packets
+                // shall not be used over fixed channel CID 0x0005.
+                if self.local_cid == 0x0005 {
+                    return;
+                }
+
+                // send InfoType 0x0003 over fixed channel CID 0x0001 shall first verifying the Fixed Channels bit
+                if self.local_cid == 0x0001 && (self.get_extended_features() & 0x0008_u32 == 0) {
+                    return;
+                }
+            }
             _ => {}
         }
 
@@ -258,6 +277,15 @@ impl Channel {
         } else {
             self.local_cid += 1;
         }
+    }
+
+    fn get_extended_features(&self) -> u32 {
+        // extended features request supported, features: fixed channels, unicast connectionless data reception
+        let features = 0x280;
+
+        // if enhanced retransmission mode is enabled
+        // features |= 0x0028;
+        features
     }
 }
 
