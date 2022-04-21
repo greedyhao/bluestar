@@ -75,14 +75,14 @@ enum SignalingCommand {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum SignalRejectReason {
+enum RejectReason {
     CommandNotUnderstood = 0x0000,
     SignalingMTUExceeded,
     InvalidCIDInRequest,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum SignalConnectionResult {
+enum ConnectionResult {
     Successful = 0x0000,
     Pending,
     RefusedPSMNotSupported,
@@ -94,13 +94,19 @@ enum SignalConnectionResult {
 
 /// Only defined for Result = Pending
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum SignalConnectionStatus {
+enum ConnectionStatus {
     NoFurtherInformationAvaliable = 0x0000,
     AuthenticationPending,
     Authorization_Pending,
 }
 
-enum SignalConfigurationResult {
+#[derive(bincode::Encode, Debug)]
+struct ConfigurationReqPayload <'a> {
+    flags: u16,
+    options: &'a [u8],
+}
+
+enum ConfigurationResult {
     Successful = 0x0000,
     FailureUnacceptableParamters,
     FailureRejectd,
@@ -109,7 +115,13 @@ enum SignalConfigurationResult {
     FailureFlowSpecRejected,
 }
 
-enum SignalInformationInfoType {
+#[derive(bincode::Encode, Debug)]
+struct InformationReqPayload {
+    info_type: InformationInfoType,
+}
+
+#[derive(bincode::Encode, Debug)]
+enum InformationInfoType {
     ConnectionlessMTU = 0x0001,
     ExtendedFeaturesSupported,
     FixedChannelsSupported,
@@ -189,14 +201,22 @@ impl Channel {
         self.request(&acl_buffer);
     }
 
-    fn create_classic_signaling_packet(&mut self, acl_buffer: &mut [u8], cmd: SignalingCommand, option: &[u8]) {
+    fn create_classic_signaling_packet(
+        &mut self,
+        acl_buffer: &mut [u8],
+        cmd: SignalingCommand,
+        option: &[u8],
+    ) {
         let mut len = 0;
         // clear data length field
         set_u16_le(&mut acl_buffer[2..4], len.clone());
 
         match cmd {
             SignalingCommand::CommandRejectRsp => {
-                set_u16_le(&mut acl_buffer[4..6], SignalRejectReason::CommandNotUnderstood as u16);
+                set_u16_le(
+                    &mut acl_buffer[4..6],
+                    RejectReason::CommandNotUnderstood as u16,
+                );
                 len += 2;
                 // TODO: Reason Data
             }
@@ -225,7 +245,10 @@ impl Channel {
                 let flags = 0x0000_u16;
                 set_u16_le(&mut acl_buffer[6..8], flags);
                 // TODO: Other result
-                set_u16_le(&mut acl_buffer[8..10], SignalConfigurationResult::Successful as u16);
+                set_u16_le(
+                    &mut acl_buffer[8..10],
+                    ConfigurationResult::Successful as u16,
+                );
             }
             SignalingCommand::DisconnectionReq | SignalingCommand::DisconnectionRsp => {
                 set_u16_le(&mut acl_buffer[4..6], self.remote_cid.clone());
@@ -260,7 +283,6 @@ impl Channel {
 
         // octet 2 and 3: data length
         set_u16_le(&mut acl_buffer[2..4], totoal_len);
-
     }
 
     fn next_sig_id(&mut self) {
@@ -313,12 +335,36 @@ mod tests {
     #[test]
     fn test_create_signal_packet() {
         let mut channel = Channel::new(0);
-        
+
         let mut acl_buffer = [0 as u8; 200];
-        channel.create_classic_signaling_packet(&mut acl_buffer, SignalingCommand::ConnectionReq, &[]);
+        channel.create_classic_signaling_packet(
+            &mut acl_buffer,
+            SignalingCommand::ConnectionReq,
+            &[],
+        );
         let len = &acl_buffer[2..4];
         let len = get_u16_le(len) as usize + 4;
         // dbg!(&acl_buffer[0..len]);
         assert_eq!(&acl_buffer[0..len], [2, 1, 4, 0, 0, 0, 64, 0]);
+    }
+
+    #[derive(bincode::Encode, bincode::Decode, Debug)]
+    struct BinSerial {
+        term: u32,
+        play: u32,
+    }
+    #[test]
+    fn test_bincode_20_rc1() {
+        let bin = BinSerial { term: 12, play: 34 };
+        let mut slice = [0u8; 100];
+        let length =
+            bincode::encode_into_slice(bin, &mut slice, bincode::config::standard()).unwrap();
+        let slice = &slice[..length];
+        println!("Bytes written: {:?}", slice);
+
+        let decode: BinSerial = bincode::decode_from_slice(slice, bincode::config::standard())
+            .unwrap()
+            .0;
+        dbg!(decode);
     }
 }
