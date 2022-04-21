@@ -235,12 +235,13 @@ impl Channel {
         self.next_sig_id();
         acl_buffer[1] = self.sig_seq_num.clone();
 
-        // octet 2 and 3: data length
-        len += (option.len() & 0xffff) as u16;
-        set_u16_le(&mut acl_buffer[2..4], len);
-
+        let totoal_len = len + (option.len() & 0xffff) as u16;
         // octet..: option data
-        // TODO
+        acl_buffer[((len + 4) as usize)..((totoal_len + 4) as usize)].copy_from_slice(option);
+
+        // octet 2 and 3: data length
+        set_u16_le(&mut acl_buffer[2..4], totoal_len);
+
     }
 
     fn next_sig_id(&mut self) {
