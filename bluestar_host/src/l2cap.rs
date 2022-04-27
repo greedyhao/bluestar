@@ -1,6 +1,10 @@
 use std::fmt;
+use std::sync::atomic::{Ordering, AtomicUsize};
 
 const L2CAP_DEFAULT_MTU: u16 = 625;
+
+static GLOBAL_LOCAL_CID: AtomicUsize = AtomicUsize::new(0x40);
+static GLOBAL_SIG_SEQ_NUM: AtomicUsize = AtomicUsize::new(1);
 
 /// The state of a L2CAP channel, according to
 /// BLUETOOTH CORE SPECIFICATION Version 5.3 | Vol 3, Part A, page 1088
@@ -101,7 +105,7 @@ enum ConnectionStatus {
 }
 
 #[derive(bincode::Encode, Debug)]
-struct ConfigurationReqPayload <'a> {
+struct ConfigurationReqPayload<'a> {
     flags: u16,
     options: &'a [u8],
 }
@@ -223,7 +227,7 @@ impl Channel {
             SignalingCommand::ConnectionReq => {
                 set_u16_le(&mut acl_buffer[4..6], self.psm.clone());
 
-                self.next_loacl_cid();
+                self.local_cid = get_next_loacl_cid();
                 set_u16_le(&mut acl_buffer[6..8], self.local_cid.clone());
                 len += 4;
             }
@@ -274,7 +278,7 @@ impl Channel {
         acl_buffer[0] = cmd as u8;
 
         // octet 1: identifier
-        self.next_sig_id();
+        self.sig_seq_num = get_next_sig_id();
         acl_buffer[1] = self.sig_seq_num.clone();
 
         let totoal_len = len + (option.len() & 0xffff) as u16;
@@ -283,22 +287,6 @@ impl Channel {
 
         // octet 2 and 3: data length
         set_u16_le(&mut acl_buffer[2..4], totoal_len);
-    }
-
-    fn next_sig_id(&mut self) {
-        if self.sig_seq_num == 0xff_u8 {
-            self.sig_seq_num = 1;
-        } else {
-            self.sig_seq_num += 1;
-        }
-    }
-
-    fn next_loacl_cid(&mut self) {
-        if self.local_cid == 0 || self.local_cid == 0xffff_u16 {
-            self.local_cid = 0x40;
-        } else {
-            self.local_cid += 1;
-        }
     }
 
     fn get_extended_features(&self) -> u32 {
@@ -316,6 +304,26 @@ struct Signal {
     id: u8,
     code: u8,
     // date: u16,
+}
+
+fn get_next_loacl_cid() -> u16 {
+    let cid = GLOBAL_LOCAL_CID.load(Ordering::Relaxed);
+    if cid == 0 || cid == 0xffff {
+        GLOBAL_LOCAL_CID.store(0x40, Ordering::Relaxed);
+    } else {
+        GLOBAL_LOCAL_CID.fetch_add(1, Ordering::Relaxed);
+    }
+    cid as u16
+}
+
+fn get_next_sig_id() -> u8 {
+    let id = GLOBAL_SIG_SEQ_NUM.load(Ordering::Relaxed);
+    if id == 0xff {
+        GLOBAL_SIG_SEQ_NUM.store(1, Ordering::Relaxed);
+    } else {
+        GLOBAL_SIG_SEQ_NUM.fetch_add(1, Ordering::Relaxed);
+    }
+    id as u8
 }
 
 fn set_u16_le(a: &mut [u8], v: u16) {
