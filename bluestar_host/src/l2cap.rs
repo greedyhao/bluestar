@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::atomic::{Ordering, AtomicUsize};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 const L2CAP_DEFAULT_MTU: u16 = 625;
 
@@ -150,6 +150,11 @@ pub struct Channel {
 
     /// Protocol/Service Multiplexer
     psm: u16,
+
+    le_interval_min: u16,
+    le_interval_max: u16,
+    le_latency: u16,
+    le_timeout: u16,
 }
 
 impl Channel {
@@ -168,6 +173,11 @@ impl Channel {
             sig_seq_num: 0,
 
             psm,
+
+            le_interval_min: 0,
+            le_interval_max: 0,
+            le_latency: 0,
+            le_timeout: 0,
         }
     }
 
@@ -270,6 +280,13 @@ impl Channel {
                 if self.local_cid == 0x0001 && (self.get_extended_features() & 0x0008_u32 == 0) {
                     return;
                 }
+            }
+            SignalingCommand::ConnectionParameterUpdateReq => {
+                // TODO: Only send from Peripheral to Central
+                set_u16_le(&mut acl_buffer[4..6], self.le_interval_min.clone());
+                set_u16_le(&mut acl_buffer[6..8], self.le_interval_max.clone());
+                set_u16_le(&mut acl_buffer[8..10], self.le_latency.clone());
+                set_u16_le(&mut acl_buffer[10..12], self.le_timeout.clone());
             }
             _ => {}
         }

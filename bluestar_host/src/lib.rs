@@ -1,3 +1,4 @@
+mod hci;
 mod l2cap;
 
 #[cfg(test)]
