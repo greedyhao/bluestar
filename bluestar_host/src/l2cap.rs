@@ -150,6 +150,7 @@ pub struct Channel {
 
     /// Protocol/Service Multiplexer
     psm: u16,
+    initial_credits: u16,
 
     le_interval_min: u16,
     le_interval_max: u16,
@@ -173,6 +174,7 @@ impl Channel {
             sig_seq_num: 0,
 
             psm,
+            initial_credits: 0,
 
             le_interval_min: 0,
             le_interval_max: 0,
@@ -287,6 +289,13 @@ impl Channel {
                 set_u16_le(&mut acl_buffer[6..8], self.le_interval_max.clone());
                 set_u16_le(&mut acl_buffer[8..10], self.le_latency.clone());
                 set_u16_le(&mut acl_buffer[10..12], self.le_timeout.clone());
+            }
+            SignalingCommand::LeCreditBasedConnectionReq => {
+                set_u16_le(&mut acl_buffer[4..6], self.psm.clone());
+                set_u16_le(&mut acl_buffer[6..8], self.local_cid.clone());
+                set_u16_le(&mut acl_buffer[8..10], self.local_mtu.clone());
+                set_u16_le(&mut acl_buffer[10..12], self.local_mtu.clone()); // TODO: compare with max le mtu
+                set_u16_le(&mut acl_buffer[12..14], self.initial_credits.clone());
             }
             _ => {}
         }
