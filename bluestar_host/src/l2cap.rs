@@ -285,21 +285,35 @@ impl Channel {
             }
             SignalingCommand::ConnectionParameterUpdateReq => {
                 // TODO: Only send from Peripheral to Central
+
+                if self.le_interval_max < self.le_interval_min {
+                    self.le_interval_max = self.le_interval_min.clone();
+                }
                 set_u16_le(&mut acl_buffer[4..6], self.le_interval_min.clone());
                 set_u16_le(&mut acl_buffer[6..8], self.le_interval_max.clone());
                 set_u16_le(&mut acl_buffer[8..10], self.le_latency.clone());
                 set_u16_le(&mut acl_buffer[10..12], self.le_timeout.clone());
             }
             SignalingCommand::LeCreditBasedConnectionReq => {
+                if self.local_mtu < 23 {
+                    self.local_mtu = 23;
+                }
+
+                let mut mps = self.local_mtu;
+                if mps > 65533 {
+                    mps = 65533;
+                }
                 set_u16_le(&mut acl_buffer[4..6], self.psm.clone());
                 set_u16_le(&mut acl_buffer[6..8], self.local_cid.clone());
                 set_u16_le(&mut acl_buffer[8..10], self.local_mtu.clone());
-                set_u16_le(&mut acl_buffer[10..12], self.local_mtu.clone()); // TODO: compare with max le mtu
+                set_u16_le(&mut acl_buffer[10..12], mps); // TODO: compare with max le mtu
                 set_u16_le(&mut acl_buffer[12..14], self.initial_credits.clone());
             }
             SignalingCommand::FlowControlCreditInd => {
                 set_u16_le(&mut acl_buffer[4..6], self.local_cid.clone());
-                let new_credit = 0_u16;
+
+                // TODO: new_credit shall be in the range of 1 to 65535
+                let new_credit = 1_u16;
                 set_u16_le(&mut acl_buffer[6..8], new_credit);
             }
             _ => {}
