@@ -297,6 +297,11 @@ impl Channel {
                 set_u16_le(&mut acl_buffer[10..12], self.local_mtu.clone()); // TODO: compare with max le mtu
                 set_u16_le(&mut acl_buffer[12..14], self.initial_credits.clone());
             }
+            SignalingCommand::FlowControlCreditInd => {
+                set_u16_le(&mut acl_buffer[4..6], self.local_cid.clone());
+                let new_credit = 0_u16;
+                set_u16_le(&mut acl_buffer[6..8], new_credit);
+            }
             _ => {}
         }
 
