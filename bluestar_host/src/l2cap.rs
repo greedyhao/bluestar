@@ -420,4 +420,60 @@ mod tests {
             .0;
         dbg!(decode);
     }
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct Host {
+        buf: [u8; 20],
+        hci: Hci,
+        l2cap: L2cap,
+    }
+    #[derive(Debug, PartialEq, Eq)]
+    struct Hci {}
+    #[derive(Debug, PartialEq, Eq)]
+    struct L2cap {}
+
+    impl Host {
+        fn new() -> Host {
+            Host {
+                buf: [0; 20],
+                hci: Hci {},
+                l2cap: L2cap {},
+            }
+        }
+
+        fn edit_buf(&mut self, pos: u32, data: u8) {
+            self.buf[pos as usize] = data;
+        }
+
+        fn get_buf(&mut self) -> &mut [u8] {
+            &mut self.buf
+        }
+
+        fn add_hci(&mut self, hci: Hci) {
+            self.hci = hci;
+        }
+    }
+    impl Hci {
+        fn edit_buf(&self, buf: &mut [u8], pos: u32, data: u8) {
+            buf[pos as usize] = data;
+        }
+    }
+
+    #[test]
+    fn test_struct_host() {
+        let mut host = Host::new();
+        host.edit_buf(1, 1);
+        host.edit_buf(2, 2);
+
+        let buf = host.get_buf();
+        buf[3] = 3;
+
+        host.edit_buf(4, 4);
+        host.hci.edit_buf(&mut host.buf, 5, 5);
+
+        let hci = Hci{};
+        host.add_hci(hci);
+
+        dbg!(host);
+    }
 }
